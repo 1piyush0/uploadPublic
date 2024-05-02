@@ -1,85 +1,62 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const fs = require("fs");
+const multer = require('multer');
 
 const app = express();
-const port = 3000;
+const port = 1337;
 
-app.use(bodyParser.json());
 
-const availabilityData = JSON.parse(
-  fs.readFileSync("availability.json", "utf8")
-);
+let data = fs.readFileSync('data.txt', 'utf8');
 
-const daysOfWeek = [
-  "sunday",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-];
 
-function getDayOfWeek(dateString) {
-  const date = new Date(dateString);
-  const dayIndex = date.getDay();
-  return daysOfWeek[dayIndex];
-}
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  },
+});
 
-function getNextDate(dateString) {
-  const currentDate = new Date(dateString);
-  const nextDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
-  const nextDateString = nextDate.toISOString().slice(0, 10);
-  return nextDateString;
-}
+const upload = multer({ storage });
 
-function isDoctorAvailable(date, time) {
-  let dayOfWeek = String(getDayOfWeek(date));
-  let i = 0,
-    en;
-  for (; i < 7; i++) {
-    if (daysOfWeek[i] === dayOfWeek) break;
+app.post('/uploadFile', upload.single('data.txt'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
   }
-  en = i + 7;
+  res.json({ message: 'File uploaded successfully', filename: req.file.filename });
+});
 
-  for (; i < en; i++) {
-    const availableSlots = availabilityData.availabilityTimings[dayOfWeek];
-    for (let j = 0; j < Object.keys(availableSlots).length; j++) {
-      if (
-        i === en - 7 &&
-        availableSlots[j]["start"] <= time &&
-        availableSlots[j]["end"] >= time
-      ) {
-        return {
-          isAvailable: true,
-        };
-      } else if (i === en - 7 && availableSlots[j]["start"] > time) {
-        return {
-          isAvailable: false,
-          nextAvailableSlot: {
-            date: date,
-            time: availableSlots[j]["start"],
-          },
-        };
-      } else if (i > en - 7) {
-        return {
-          isAvailable: false,
-          nextAvailableSlot: {
-            date: date,
-            time: availableSlots[j]["start"],
-          },
-        };
-      }
-    }
-    dayOfWeek = daysOfWeek[(i + 1) % 7];
-    date = getNextDate(date);
+// console.log(data)
+
+ function pR(){
+  var lines = data.split('\n');
+  for (var line = 0; line < lines.length; line++) {
+    lines[line]="R"+lines[line];
+    // console.log(lines[line]);
+  }
+  return lines;
+}
+
+pR();
+
+
+async function p2(){
+  var lines = await pR(10);
+  for (var line = 0; line < lines.length; line++) {
+    lines[line]="2"+lines[line];
+    console.log(lines[line]);
   }
 }
 
-app.get("/doctor-availability", (req, res) => {
+p2();
+
+
+
+
+
+app.post("/uploadFile", (req, res) => {
   const { date, time } = req.query;
-  const result = isDoctorAvailable(date, time);
   res.json(result);
 });
 
